@@ -141,6 +141,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Handle generate study notes button click
+    document.getElementById('generateStudyNotes').addEventListener('click', async () => {
+        const button = document.getElementById('generateStudyNotes');
+        setButtonLoading(button, true);
+        
+        try {
+            const response = await fetch('/api/generate-study-notes', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showStatus('Study notes generated successfully! 📚', 'success');
+                
+                // Wait a moment to ensure the PDF is ready
+                setTimeout(() => {
+                    // Open PDF in new window using the provided URL
+                    const pdfUrl = data.pdfUrl || `/${data.pdfPath}`;
+                    const fullUrl = new URL(pdfUrl, window.location.origin).href;
+                    window.open(fullUrl, '_blank', 'noopener,noreferrer');
+                }, 1000);
+            } else {
+                showStatus(data.error || 'Failed to generate study notes', 'error');
+            }
+        } catch (error) {
+            showStatus('Error generating study notes', 'error');
+            console.error('Error:', error);
+        } finally {
+            setButtonLoading(button, false);
+        }
+    });
+
     // Add hover effects to cards
     document.querySelectorAll('.card').forEach(card => {
         card.addEventListener('mouseenter', () => {

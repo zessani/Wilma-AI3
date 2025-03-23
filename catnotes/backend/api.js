@@ -2,7 +2,9 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const firefliesService = require('./fireflies');
+const pdfTranscription = require('./pdf-transcription');
 const { spawn } = require('child_process');
+
 
 const router = express.Router();
 
@@ -124,6 +126,77 @@ router.post('/api/generate-latest', async (req, res) => {
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to generate PDF'
+        });
+    }
+});
+
+// Generate study notes from latest Fireflies transcript
+router.post('/api/generate-study-notes', async (req, res) => {
+    try {
+        // Get the latest transcript
+        const transcripts = await firefliesService.getRecentTranscripts(1);
+        
+        if (!transcripts || transcripts.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'No recent transcripts found'
+            });
+        }
+        
+        const latestTranscript = transcripts[0];
+        const transcriptionData = await firefliesService.getTranscription(latestTranscript.id);
+        
+        if (!transcriptionData || !transcriptionData.transcript) {
+            return res.status(404).json({
+                success: false,
+                error: 'Transcript data not found'
+            });
+        }
+
+        // Format the notes content with bullet points
+        let notesContent = `# CatNotes Summarized\n\n`;
+        notesContent += `## ${latestTranscript.title || 'Class Notes'}\n`;
+        notesContent += `Date: ${new Date(latestTranscript.dateString).toLocaleDateString()}\n\n`;
+        
+        // Add summary if available
+        if (transcriptionData.summary) {
+            notesContent += '## Key Points\n\n';
+            // Split summary into sentences and make bullet points
+            const summaryPoints = transcriptionData.summary
+                .split(/[.!?]+/)
+                .map(point => point.trim())
+                .filter(point => point.length > 0)
+                .map(point => `* ${point}`);
+            notesContent += summaryPoints.join('\n') + '\n\n';
+        }
+        
+        // Add action items if available
+        if (transcriptionData.actionItems && transcriptionData.actionItems.length > 0) {
+            notesContent += '## Action Items\n\n';
+            transcriptionData.actionItems.forEach(item => {
+                notesContent += `* ${item}\n`;
+            });
+            notesContent += '\n';
+        }
+
+        // Generate PDF from the formatted notes
+        const pdfPath = await pdfTranscription.createPdf(
+            notesContent,
+            `${latestTranscript.title || 'Class Notes'} - Summary`
+        );
+
+        // Return success response with PDF path
+        res.json({
+            success: true,
+            pdfPath: `outputs/${path.basename(pdfPath)}`,
+            message: 'Summary notes generated successfully'
+        });
+        
+    } catch (error) {
+        console.error('Error generating summary notes:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to generate summary notes'
         });
     }
 });
