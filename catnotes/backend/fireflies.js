@@ -38,22 +38,28 @@ const scheduleBot = async (meetingLink, meetingTitle) => {
 };
 
 // Get transcription for a meeting
-const getTranscription = async (botId) => {
+const getTranscription = async (transcriptId) => {
   try {
     const response = await axios.post(
       FIREFLIES_API_URL,
       {
         query: `
-          query GetTranscription($botId: ID!) {
-            meeting(id: $botId) {
-              transcript
-              summary
-              actionItems
+          query Transcript($transcriptId: String!) {
+            transcript(id: $transcriptId) {
+              title
+              sentences {
+                text
+                speaker_name
+              }
+              summary {
+                action_items
+                overview
+              }
             }
           }
         `,
         variables: {
-          botId: botId
+          transcriptId: transcriptId
         }
       },
       {
@@ -64,7 +70,32 @@ const getTranscription = async (botId) => {
       }
     );
     
-    return response.data.data.meeting;
+    const transcriptData = response.data.data.transcript;
+    
+    if (!transcriptData) {
+      return null;
+    }
+    
+    // Format transcript from sentences
+    let formattedTranscript = '';
+    
+    if (transcriptData.sentences && transcriptData.sentences.length > 0) {
+      formattedTranscript = transcriptData.sentences.map(sentence => 
+        `${sentence.speaker_name}: ${sentence.text}`
+      ).join('\n\n');
+    }
+    
+    // Extract action items 
+    const actionItems = transcriptData.summary?.action_items || [];
+    
+    // Extract summary
+    const summary = transcriptData.summary?.overview || '';
+    
+    return {
+      transcript: formattedTranscript,
+      summary: summary,
+      actionItems: actionItems
+    };
   } catch (error) {
     console.error('Error getting Fireflies transcription:', error.response?.data || error.message);
     throw error;

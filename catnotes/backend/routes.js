@@ -3,6 +3,7 @@ const router = express.Router();
 const zoomService = require('./zoom');
 const transcribeService = require('./transcribe');
 const pdfGenerator = require('./pdf-transcription');
+const firefliesPdfGenerator = require('./fireflies-pdf-generator');
 
 // Join meeting route
 router.post('/meetings/join', async (req, res) => {
@@ -180,6 +181,42 @@ router.post('/generate-pdf', async (req, res) => {
   } catch (error) {
     console.error('Error generating PDF:', error);
     res.status(500).json({ error: 'Failed to generate PDF' });
+  }
+});
+
+// Generate PDF directly from Fireflies transcription
+router.post('/fireflies/generate-pdf', async (req, res) => {
+  try {
+    const { botId, meetingTitle } = req.body;
+    
+    if (!botId) {
+      return res.status(400).json({ error: 'Bot ID is required' });
+    }
+
+    console.log(`Generating PDF for Fireflies meeting: ${meetingTitle} (Bot ID: ${botId})`);
+    
+    // Generate PDF from Fireflies transcription
+    const result = await firefliesPdfGenerator.generateTranscriptionPdf(botId, meetingTitle);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'PDF generated successfully',
+        pdfPath: result.pdfPath
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Failed to generate PDF',
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error generating PDF from Fireflies transcription:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to generate PDF from transcription' 
+    });
   }
 });
 
