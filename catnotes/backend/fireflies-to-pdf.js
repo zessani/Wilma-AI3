@@ -1,11 +1,35 @@
 #!/usr/bin/env node
 // fireflies-to-pdf.js - Schedule a Fireflies bot and generate a PDF from the transcript
-require('dotenv').config();
-const firefliesService = require('./fireflies');
-const firefliesPdfGenerator = require('./fireflies-pdf-generator');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure we're using the correct .env path regardless of where the script is called from
+const envPath = path.resolve(__dirname, '.env');
+require('dotenv').config({ path: envPath });
+
+// Ensure all required modules are imported relative to the script location
+const firefliesService = require(path.join(__dirname, 'fireflies'));
+const pdfTranscription = require(path.join(__dirname, 'pdf-transcription'));
 
 const POLL_INTERVAL_MS = 60000; // Check every minute
 const MAX_POLLS = 60; // Max 1 hour of polling
+
+// Make script executable on Unix systems (macOS and Linux)
+if (process.platform !== 'win32') {
+  try {
+    const currentMode = fs.statSync(__filename).mode;
+    const executableMode = currentMode | 0o111; // Add executable permission
+    fs.chmodSync(__filename, executableMode);
+    
+    // Also ensure the outputs directory is writable
+    const outputsDir = path.resolve(__dirname, '..', 'outputs');
+    if (!fs.existsSync(outputsDir)) {
+      fs.mkdirSync(outputsDir, { recursive: true, mode: 0o755 });
+    }
+  } catch (error) {
+    console.warn('Warning: Could not set permissions:', error.message);
+  }
+}
 
 async function scheduleBotAndGetTranscript(meetingLink, meetingTitle) {
   try {
@@ -30,44 +54,46 @@ async function scheduleBotAndGetTranscript(meetingLink, meetingTitle) {
   }
 }
 
-async function generatePdfFromTranscriptId(transcriptId, meetingTitle) {
-  let pollCount = 0;
-  
-  console.log(`\nAttempting to generate PDF for meeting: "${meetingTitle}"`);
-  console.log(`Transcript ID: ${transcriptId}`);
-  
-  while (pollCount < MAX_POLLS) {
-    try {
-      console.log(`\nAttempt ${pollCount + 1} of ${MAX_POLLS}`);
-      const result = await firefliesPdfGenerator.generateTranscriptionPdf(transcriptId, meetingTitle);
-      
-      if (result.success) {
-        console.log('\n✅ Success! PDF generated successfully!');
-        console.log('PDF Path:', result.pdfPath);
-        return { success: true, pdfPath: result.pdfPath };
-      } else if (result.error === 'Transcription not ready yet or not available') {
-        console.log('Transcription not ready yet or not available. Waiting before trying again...');
-        pollCount++;
-        
-        if (pollCount < MAX_POLLS) {
-          console.log(`Waiting ${POLL_INTERVAL_MS / 1000} seconds before checking again...`);
-          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
-        }
-      } else {
-        console.error('Error generating PDF:', result.error);
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      return { success: false, error };
+async function generatePdfFromTranscriptId(transcriptId, title) {
+  try {
+    console.log(`Fetching transcript for ID: ${transcriptId}`);
+    const transcriptData = await firefliesService.getTranscription(transcriptId);
+    
+    if (!transcriptData || !transcriptData.transcript) {
+      throw new Error('No transcript text found');
     }
+    
+    // Format the transcript with summary and action items if available
+    let fullText = '';
+    
+    if (transcriptData.summary) {
+      fullText += '# Summary\n\n';
+      fullText += transcriptData.summary + '\n\n';
+    }
+    
+    if (transcriptData.actionItems && transcriptData.actionItems.length > 0) {
+      fullText += '# Action Items\n\n';
+      transcriptData.actionItems.forEach(item => {
+        fullText += `• ${item}\n`;
+      });
+      fullText += '\n';
+    }
+    
+    fullText += '# Full Transcript\n\n';
+    fullText += transcriptData.transcript;
+    
+    console.log('Generating PDF...');
+    const outputPath = await pdfTranscription.createPdf(fullText, title);
+    console.log(`PDF generated successfully at: ${outputPath}`);
+    
+    // Get absolute path for user reference
+    const absolutePath = path.resolve(__dirname, '..', outputPath);
+    console.log(`Full path: ${absolutePath}`);
+    return outputPath;
+  } catch (error) {
+    console.error('Error generating PDF:', error.message);
+    throw error;
   }
-  
-  console.log('\n❌ Maximum polling attempts reached. Transcription may still be processing.');
-  console.log('You can try again later with:');
-  console.log(`node fireflies-to-pdf.js --pdf-only ${transcriptId} "${meetingTitle}"`);
-  
-  return { success: false, error: 'Exceeded maximum polling attempts' };
 }
 
 // List recent transcripts
