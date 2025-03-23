@@ -1,16 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
 // fireflies.js
 const axios = require('axios');
 
@@ -139,20 +126,25 @@ const getTranscription = async (transcriptId) => {
     // Format transcript from sentences
     let formattedTranscript = '';
     
-    if (transcriptData.sentences && transcriptData.sentences.length > 0) {
+    if (transcriptData.sentences && Array.isArray(transcriptData.sentences) && transcriptData.sentences.length > 0) {
       formattedTranscript = transcriptData.sentences.map(sentence => 
-        `${sentence.speaker_name}: ${sentence.text}`
+        `${sentence.speaker_name || 'Speaker'}: ${sentence.text}`
       ).join('\n\n');
     }
     
-    // Extract action items 
-    const actionItems = transcriptData.summary?.action_items || [];
+    // Ensure action items is always an array
+    let actionItems = [];
+    if (transcriptData.summary && transcriptData.summary.action_items) {
+      actionItems = Array.isArray(transcriptData.summary.action_items) 
+        ? transcriptData.summary.action_items 
+        : [transcriptData.summary.action_items];
+    }
     
-    // Extract summary
+    // Ensure summary is a string
     const summary = transcriptData.summary?.overview || '';
     
     return {
-      transcript: formattedTranscript,
+      transcript: formattedTranscript || 'No transcript text available.',
       summary: summary,
       actionItems: actionItems
     };

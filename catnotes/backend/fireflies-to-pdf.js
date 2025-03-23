@@ -71,7 +71,8 @@ async function generatePdfFromTranscriptId(transcriptId, title) {
       fullText += transcriptData.summary + '\n\n';
     }
     
-    if (transcriptData.actionItems && transcriptData.actionItems.length > 0) {
+    // Safely handle action items
+    if (transcriptData.actionItems && Array.isArray(transcriptData.actionItems) && transcriptData.actionItems.length > 0) {
       fullText += '# Action Items\n\n';
       transcriptData.actionItems.forEach(item => {
         fullText += `• ${item}\n`;
