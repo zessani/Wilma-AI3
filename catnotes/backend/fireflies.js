@@ -11,18 +11,15 @@ const scheduleBot = async (meetingLink, meetingTitle) => {
       FIREFLIES_API_URL,
       {
         query: `
-          mutation ScheduleBot($input: ScheduleBotInput!) {
-            scheduleBot(input: $input) {
+          mutation AddToLiveMeeting($meetingLink: String!, $title: String) {
+            addToLiveMeeting(meeting_link: $meetingLink, title: $title) {
               success
-              botId
             }
           }
         `,
         variables: {
-          input: {
-            meetingLink: meetingLink,
-            title: meetingTitle
-          }
+          meetingLink: meetingLink,
+          title: meetingTitle
         }
       },
       {
@@ -33,7 +30,7 @@ const scheduleBot = async (meetingLink, meetingTitle) => {
       }
     );
     
-    return response.data.data.scheduleBot;
+    return response.data.data.addToLiveMeeting;
   } catch (error) {
     console.error('Error scheduling Fireflies bot:', error.response?.data || error.message);
     throw error;

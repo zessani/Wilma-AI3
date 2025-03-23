@@ -12,12 +12,18 @@ async function testFirefliesIntegration() {
       'Test Wilma Meeting'
     );
     
-    console.log('Bot scheduled successfully!');
-    console.log('Bot ID:', result.botId);
-    
-    return result.botId;
+    if (result.success) {
+      console.log('Bot scheduled successfully!');
+      // Note: The addToLiveMeeting mutation doesn't return a botId
+      console.log('Result:', result);
+      return true;
+    } else {
+      console.log('Failed to schedule bot:', result);
+      return false;
+    }
   } catch (error) {
     console.error('Test failed:', error);
+    return false;
   }
 }
 
