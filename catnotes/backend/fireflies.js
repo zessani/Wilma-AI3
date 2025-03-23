@@ -37,6 +37,53 @@ const scheduleBot = async (meetingLink, meetingTitle) => {
   }
 };
 
+// Get recent transcripts
+const getRecentTranscripts = async (limit = 10) => {
+  try {
+    const response = await axios.post(
+      FIREFLIES_API_URL,
+      {
+        query: `
+          query GetRecentTranscripts($limit: Int) {
+            transcripts(limit: $limit) {
+              id
+              title
+              dateString
+            }
+          }
+        `,
+        variables: {
+          limit
+        }
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${FIREFLIES_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return response.data.data.transcripts;
+  } catch (error) {
+    console.error('Error getting recent transcripts:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Find transcript by title (case-insensitive partial match)
+const findTranscriptByTitle = async (searchTitle, maxResults = 10) => {
+  try {
+    const transcripts = await getRecentTranscripts(maxResults);
+    return transcripts.filter(t => 
+      t.title.toLowerCase().includes(searchTitle.toLowerCase())
+    );
+  } catch (error) {
+    console.error('Error finding transcript:', error);
+    throw error;
+  }
+};
+
 // Get transcription for a meeting
 const getTranscription = async (transcriptId) => {
   try {
@@ -104,5 +151,7 @@ const getTranscription = async (transcriptId) => {
 
 module.exports = {
   scheduleBot,
-  getTranscription
+  getTranscription,
+  getRecentTranscripts,
+  findTranscriptByTitle
 };

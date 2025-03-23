@@ -70,6 +70,84 @@ async function generatePdfFromTranscriptId(transcriptId, meetingTitle) {
   return { success: false, error: 'Exceeded maximum polling attempts' };
 }
 
+// List recent transcripts
+async function listRecentTranscripts(limit = 10) {
+  try {
+    console.log(`\nFetching ${limit} most recent transcripts...`);
+    const transcripts = await firefliesService.getRecentTranscripts(limit);
+    
+    if (!transcripts || transcripts.length === 0) {
+      console.log('No transcripts found.');
+      return;
+    }
+    
+    console.log('\nRecent transcripts:');
+    console.log('------------------');
+    transcripts.forEach((t, i) => {
+      console.log(`${i + 1}. "${t.title}"`);
+      console.log(`   ID: ${t.id}`);
+      console.log(`   Date: ${new Date(t.dateString).toLocaleString()}`);
+      console.log('');
+    });
+  } catch (error) {
+    console.error('Error listing transcripts:', error);
+  }
+}
+
+// Find and generate PDF for a meeting by title
+async function findAndGeneratePdf(searchTitle) {
+  try {
+    console.log(`\nSearching for transcript with title containing: "${searchTitle}"`);
+    const matches = await firefliesService.findTranscriptByTitle(searchTitle);
+    
+    if (!matches || matches.length === 0) {
+      console.log('No matching transcripts found.');
+      return { success: false, error: 'No matching transcripts found' };
+    }
+    
+    if (matches.length > 1) {
+      console.log('\nMultiple matching transcripts found:');
+      matches.forEach((t, i) => {
+        console.log(`${i + 1}. "${t.title}" (${new Date(t.dateString).toLocaleString()})`);
+        console.log(`   ID: ${t.id}`);
+      });
+      console.log('\nPlease specify which transcript to use with:');
+      console.log(`node fireflies-to-pdf.js --pdf-only <transcript-id> "${searchTitle}"`);
+      return { success: false, error: 'Multiple matches found' };
+    }
+    
+    // If only one match, use it
+    const transcript = matches[0];
+    console.log(`\nFound matching transcript: "${transcript.title}"`);
+    return generatePdfFromTranscriptId(transcript.id, transcript.title);
+  } catch (error) {
+    console.error('Error finding and generating PDF:', error);
+    return { success: false, error };
+  }
+}
+
+// Get latest transcript and generate PDF
+async function generatePdfFromLatest() {
+  try {
+    console.log('\nFetching most recent transcript...');
+    const transcripts = await firefliesService.getRecentTranscripts(1);
+    
+    if (!transcripts || transcripts.length === 0) {
+      console.log('No transcripts found.');
+      return { success: false, error: 'No transcripts found' };
+    }
+    
+    const latest = transcripts[0];
+    console.log(`\nFound latest transcript: "${latest.title}"`);
+    console.log(`Date: ${new Date(latest.dateString).toLocaleString()}`);
+    
+    return generatePdfFromTranscriptId(latest.id, latest.title);
+  } catch (error) {
+    console.error('Error generating PDF from latest transcript:', error);
+    return { success: false, error };
+  }
+}
+
 // Main function to handle script execution
 async function main() {
   const args = process.argv.slice(2);
@@ -79,11 +157,45 @@ async function main() {
     console.log('Usage:');
     console.log('  Schedule a bot and get transcript:');
     console.log('    node fireflies-to-pdf.js <meeting-link> <meeting-title>');
-    console.log('\n  Generate PDF only from an existing transcript ID:');
+    console.log('\n  Generate PDF from an existing transcript ID:');
     console.log('    node fireflies-to-pdf.js --pdf-only <transcript-id> <meeting-title>');
+    console.log('\n  Generate PDF from latest transcript:');
+    console.log('    node fireflies-to-pdf.js --latest');
+    console.log('\n  List recent transcripts:');
+    console.log('    node fireflies-to-pdf.js --list [limit]');
+    console.log('\n  Find and generate PDF by meeting title:');
+    console.log('    node fireflies-to-pdf.js --find <search-title>');
     console.log('\n  Examples:');
     console.log('    node fireflies-to-pdf.js "https://zoom.us/j/123456" "Weekly Team Meeting"');
     console.log('    node fireflies-to-pdf.js --pdf-only 01JQ0T3AMPST4ZJH5M5THG3KET "Weekly Team Meeting"');
+    console.log('    node fireflies-to-pdf.js --latest');
+    console.log('    node fireflies-to-pdf.js --list 5');
+    console.log('    node fireflies-to-pdf.js --find "Weekly Team"');
+    return;
+  }
+  
+  // Generate PDF from latest transcript
+  if (args[0] === '--latest') {
+    await generatePdfFromLatest();
+    return;
+  }
+  
+  // List recent transcripts
+  if (args[0] === '--list') {
+    const limit = parseInt(args[1]) || 10;
+    await listRecentTranscripts(limit);
+    return;
+  }
+  
+  // Find and generate PDF by title
+  if (args[0] === '--find') {
+    const searchTitle = args[1];
+    if (!searchTitle) {
+      console.error('Error: Search title is required');
+      console.log('Usage: node fireflies-to-pdf.js --find <search-title>');
+      return;
+    }
+    await findAndGeneratePdf(searchTitle);
     return;
   }
   
@@ -117,10 +229,15 @@ async function main() {
   if (schedulingResult.success) {
     console.log('\n✅ Bot scheduled successfully!');
     console.log('\nNOTE: After the meeting is completed and processed by Fireflies,');
-    console.log('you can generate a PDF using the transcript ID from your Fireflies dashboard:');
-    console.log('https://app.fireflies.ai/meetings');
-    console.log('\nThen run:');
-    console.log(`node fireflies-to-pdf.js --pdf-only YOUR_TRANSCRIPT_ID "${meetingTitle}"`);
+    console.log('you can generate a PDF using one of these methods:');
+    console.log('\n1. Generate PDF from latest transcript (recommended):');
+    console.log('   node fireflies-to-pdf.js --latest');
+    console.log('\n2. Find by title:');
+    console.log(`   node fireflies-to-pdf.js --find "${meetingTitle}"`);
+    console.log('\n3. List recent transcripts and copy the ID:');
+    console.log('   node fireflies-to-pdf.js --list');
+    console.log('\n4. Use the transcript ID directly:');
+    console.log(`   node fireflies-to-pdf.js --pdf-only YOUR_TRANSCRIPT_ID "${meetingTitle}"`);
   }
 }
 
