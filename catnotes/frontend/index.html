@@ -3,37 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fireflies Meeting Assistant</title>
+    <title>Wilma AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        :root {
+            /* University of Arizona Colors with innovative adjustments */
+            --primary-color: #AB0520; /* Cardinal Red */
+            --primary-light: #d4082f;
+            --primary-dark: #8a041a;
+            --secondary-color: #0C234B; /* Navy Blue */
+            --secondary-light: #1a3a6b;
+            --accent-color: #4B9CD3; /* Azurite */
+            --gradient-bg: linear-gradient(120deg, #081b3c 0%, #0A1D3F 100%);
+            --background-color: #f8f9fc;
+            --card-bg: #ffffff;
+            --text-color: #2d3748;
+            --text-light: #718096;
+        }
+        
+        .app-header {
+            background: var(--gradient-bg);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+        
+        .logo-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background-color: rgba(255, 255, 255, 0.2);
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo-mark::after {
+            content: "W";
+            font-size: 32px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .logo-mark::before {
+            content: "";
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            top: 25px;
+            left: -15px;
+            opacity: 0.7;
+        }
+        
+        .app-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 1px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            color: #ffffff;
+            max-width: 500px;
+            margin: 0 auto;
+            margin-bottom: 25px;
+            letter-spacing: 0.2px;
+            line-height: 1.4;
+            font-weight: 400;
+        }
+    </style>
 </head>
 <body>
+    <div class="app-header">
+        <div class="logo-mark"></div>
+        <h1>Wilma AI</h1>
+        <p class="subtitle">University of Arizona's Intelligent Classroom Assistant</p>
+    </div>
+    
     <div class="container">
-        <h1>Fireflies Meeting Assistant</h1>
-        
         <div class="card">
-            <h2>Schedule Meeting Bot</h2>
+            <h2>Schedule Bot</h2>
             <form id="meetingForm">
                 <div class="input-group">
-                    <label for="meetingLink">Zoom Meeting Link:</label>
+                    <label for="meetingLink">
+                        <i class="fas fa-link"></i>
+                        Zoom Meeting Link
+                    </label>
                     <input type="text" id="meetingLink" name="meetingLink" placeholder="https://zoom.us/j/..." required>
                 </div>
                 
                 <div class="input-group">
-                    <label for="meetingTitle">Meeting Title:</label>
-                    <input type="text" id="meetingTitle" name="meetingTitle" placeholder="Weekly Team Meeting" required>
+                    <label for="meetingTitle">
+                        <i class="fas fa-heading"></i>
+                        Course Title
+                    </label>
+                    <input type="text" id="meetingTitle" name="meetingTitle" placeholder="MATH 129: Calculus II" required>
                 </div>
                 
-                <button type="submit" class="btn primary">Schedule Bot</button>
+                <button type="submit" class="btn primary">
+                    <i class="fas fa-robot"></i>
+                    Join
+                </button>
             </form>
         </div>
 
         <div class="card">
-            <h2>Generate Latest Transcript</h2>
-            <p>Generate a PDF from your most recent meeting transcript.</p>
-            <button id="generateLatest" class="btn secondary">Generate Latest PDF</button>
+            <h2>Learning Materials</h2>
+            <p class="description">Choose which materials to generate from your recorded class sessions</p>
+            
+            <div class="actions-container">
+                <div class="action-box">
+                    <div class="action-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    </div>
+                    <div class="action-title">Class Transcript</div>
+                    <p class="action-desc">Generate a searchable PDF transcript of your class session</p>
+                    <button id="generateLatest" class="btn secondary">Generate Transcript</button>
+                </div>
+                
+                <div class="action-box">
+                    <div class="action-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                    </div>
+                    <div class="action-title">Study Notes</div>
+                    <p class="action-desc">Create organized notes with key concepts and summaries</p>
+                    <button id="generateStudyNotes" class="btn accent">Generate Notes</button>
+                </div>
+            </div>
         </div>
 
         <div id="status" class="status-container"></div>
+    </div>
+    
+    <div class="footer">
+        © 2025 University of Arizona
     </div>
 
     <script src="script.js"></script>

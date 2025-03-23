@@ -13,6 +13,16 @@ router.use(express.json());
 // Serve the frontend files
 router.use(express.static(path.join(__dirname, '..', 'frontend')));
 
+// Serve the outputs directory for PDF downloads
+router.use('/outputs', express.static(path.join(__dirname, '..', 'outputs'), {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.pdf')) {
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', 'inline');
+        }
+    }
+}));
+
 // Schedule bot endpoint
 router.post('/api/schedule-bot', async (req, res) => {
     try {
@@ -47,39 +57,67 @@ router.post('/api/generate-latest', async (req, res) => {
         let errorOutput = '';
         
         process.stdout.on('data', (data) => {
-            output += data.toString();
+            const chunk = data.toString();
+            console.log('Script output:', chunk);
+            output += chunk;
         });
         
         process.stderr.on('data', (data) => {
-            errorOutput += data.toString();
+            const chunk = data.toString();
+            console.error('Script error:', chunk);
+            errorOutput += chunk;
         });
         
         process.on('close', (code) => {
+            console.log('Script exit code:', code);
+            console.log('Full output:', output);
+            console.log('Error output:', errorOutput);
+            
             if (code === 0) {
                 // Extract the PDF path from the output
                 const pathMatch = output.match(/PDF generated successfully at: (.+)/);
-                const pdfPath = pathMatch ? pathMatch[1].trim() : null;
-                
-                if (pdfPath) {
-                    // Create a download URL for the PDF
-                    const downloadUrl = `/outputs/${path.basename(pdfPath)}`;
-                    res.json({
-                        success: true,
-                        pdfPath,
-                        downloadUrl
-                    });
-                } else {
-                    res.json({
-                        success: true,
-                        message: 'PDF generated successfully'
+                if (!pathMatch) {
+                    console.error('Could not find PDF path in output');
+                    return res.status(500).json({
+                        success: false,
+                        error: 'Could not find generated PDF path'
                     });
                 }
+                
+                const pdfPath = pathMatch[1].trim();
+                const pdfBasename = path.basename(pdfPath);
+                const downloadUrl = `/outputs/${pdfBasename}`;
+                
+                // Verify the file exists
+                const fullPath = path.join(__dirname, '..', pdfPath);
+                if (!require('fs').existsSync(fullPath)) {
+                    console.error('Generated PDF not found at:', fullPath);
+                    return res.status(500).json({
+                        success: false,
+                        error: 'Generated PDF file not found'
+                    });
+                }
+                
+                res.json({
+                    success: true,
+                    pdfPath: pdfPath,
+                    downloadUrl: downloadUrl
+                });
             } else {
+                console.error('Script failed with code:', code);
                 res.status(500).json({
                     success: false,
                     error: errorOutput || 'Failed to generate PDF'
                 });
             }
+        });
+        
+        process.on('error', (error) => {
+            console.error('Failed to start script:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to start PDF generation script'
+            });
         });
     } catch (error) {
         console.error('Error generating PDF:', error);
@@ -89,8 +127,5 @@ router.post('/api/generate-latest', async (req, res) => {
         });
     }
 });
-
-// Serve the outputs directory for PDF downloads
-router.use('/outputs', express.static(path.join(__dirname, '..', 'outputs')));
 
 module.exports = router; 

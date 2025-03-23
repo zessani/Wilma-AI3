@@ -8,6 +8,21 @@ const app = express();
 // List of ports to try in order
 const ports = [3000, 3001, 4000, 4001, 5000, 5001];
 
+// Add request logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({
+        success: false,
+        error: err.message || 'Internal server error'
+    });
+});
+
 // Function to try starting the server on different ports
 function startServer(portIndex = 0) {
     if (portIndex >= ports.length) {
@@ -18,7 +33,7 @@ function startServer(portIndex = 0) {
     const PORT = process.env.PORT || ports[portIndex];
 
     // Use the API routes
-    app.use(api);
+    app.use('/', api);
 
     // Serve the frontend as the default route
     app.get('/', (req, res) => {
@@ -43,6 +58,11 @@ function startServer(portIndex = 0) {
             console.log(`\nYou can access the application by opening:`);
             console.log(`• Local:            http://localhost:${actualPort}`);
             console.log(`• On Your Network:  http://${getLocalIP()}:${actualPort}`);
+            console.log(`Frontend URL: http://localhost:${actualPort}`);
+            console.log(`API endpoints:`);
+            console.log(`  POST /api/schedule-bot - Schedule a Fireflies bot`);
+            console.log(`  POST /api/generate-latest - Generate PDF from latest transcript`);
+            console.log(`  GET /outputs/* - Download generated PDFs`);
         });
 }
 
