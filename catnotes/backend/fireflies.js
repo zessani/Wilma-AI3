@@ -29,11 +29,48 @@ const scheduleBot = async (meetingLink, meetingTitle) => {
         }
       }
     );
+
+    // Check if response contains errors
+    if (response.data.errors) {
+      console.error('Fireflies API returned errors:', response.data.errors);
+      throw new Error(response.data.errors[0].message);
+    }
+
+    // Validate response data structure
+    if (!response.data || !response.data.data) {
+      console.error('Invalid API response structure:', response.data);
+      throw new Error('Invalid API response structure');
+    }
+
+    const result = response.data.data.addToLiveMeeting;
     
-    return response.data.data.addToLiveMeeting;
+    // Validate result
+    if (!result) {
+      console.error('No result data in API response');
+      throw new Error('Failed to schedule bot - no result data');
+    }
+
+    return {
+      success: result.success === true,
+      error: result.success === true ? null : 'Failed to schedule bot'
+    };
+
   } catch (error) {
-    console.error('Error scheduling Fireflies bot:', error.response?.data || error.message);
-    throw error;
+    // Handle axios errors
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('API Error Response:', error.response.data);
+      throw new Error(`API Error: ${error.response.data?.errors?.[0]?.message || error.response.statusText}`);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received from API');
+      throw new Error('No response received from Fireflies API');
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error scheduling Fireflies bot:', error.message);
+      throw error;
+    }
   }
 };
 
