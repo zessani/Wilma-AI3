@@ -4,17 +4,63 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 const api = require('./api');
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Use the API routes
-app.use(api);
+// List of ports to try in order
+const ports = [3000, 3001, 4000, 4001, 5000, 5001];
 
-// Serve the frontend as the default route
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
-});
+// Function to try starting the server on different ports
+function startServer(portIndex = 0) {
+    if (portIndex >= ports.length) {
+        console.error('Could not find an available port. Please free up one of these ports:', ports);
+        process.exit(1);
+    }
+
+    const PORT = process.env.PORT || ports[portIndex];
+
+    // Use the API routes
+    app.use(api);
+
+    // Serve the frontend as the default route
+    app.get('/', (req, res) => {
+        res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+    });
+
+    // Try to start the server
+    const server = app.listen(PORT)
+        .on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                console.log(`Port ${PORT} is busy, trying next port...`);
+                server.close();
+                startServer(portIndex + 1);
+            } else {
+                console.error('Server error:', err);
+                process.exit(1);
+            }
+        })
+        .on('listening', () => {
+            const actualPort = server.address().port;
+            console.log(`\n🚀 Server running at http://localhost:${actualPort}`);
+            console.log(`\nYou can access the application by opening:`);
+            console.log(`• Local:            http://localhost:${actualPort}`);
+            console.log(`• On Your Network:  http://${getLocalIP()}:${actualPort}`);
+        });
+}
+
+// Helper function to get local IP address
+function getLocalIP() {
+    const { networkInterfaces } = require('os');
+    const nets = networkInterfaces();
+    
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            // Skip internal and non-IPv4 addresses
+            if (!net.internal && net.family === 'IPv4') {
+                return net.address;
+            }
+        }
+    }
+    return 'localhost';
+}
 
 // Start the server
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-});
+startServer();
