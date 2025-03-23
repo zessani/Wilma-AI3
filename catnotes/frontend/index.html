@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fireflies Meeting Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Fireflies Meeting Assistant</h1>
+        
+        <div class="card">
+            <h2>Schedule Meeting Bot</h2>
+            <form id="meetingForm">
+                <div class="input-group">
+                    <label for="meetingLink">Zoom Meeting Link:</label>
+                    <input type="text" id="meetingLink" name="meetingLink" placeholder="https://zoom.us/j/..." required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="meetingTitle">Meeting Title:</label>
+                    <input type="text" id="meetingTitle" name="meetingTitle" placeholder="Weekly Team Meeting" required>
+                </div>
+                
+                <button type="submit" class="btn primary">Schedule Bot</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Generate Latest Transcript</h2>
+            <p>Generate a PDF from your most recent meeting transcript.</p>
+            <button id="generateLatest" class="btn secondary">Generate Latest PDF</button>
+        </div>
+
+        <div id="status" class="status-container"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
